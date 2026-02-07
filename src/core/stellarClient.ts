@@ -6,6 +6,7 @@ import {
   BASE_FEE,
   Networks,
   Horizon,
+  StrKey,
 } from "@stellar/stellar-sdk";
 import type { NetworkConfig } from "../config/networks.js";
 import { z } from "zod";
@@ -51,7 +52,13 @@ export class StellarClient {
    * Fetch all balances for an account (XLM + trust lines).
    */
   async getBalance(address: string): Promise<BalanceEntry[]> {
-    const parsed = StellarAddressSchema.safeParse(address);
+    const normalized = address.trim();
+    if (!StrKey.isValidEd25519PublicKey(normalized)) {
+      throw new Error(
+        "Stellar address has invalid checksum or format. Check for typos or extra spaces; use a 56-character key starting with G."
+      );
+    }
+    const parsed = StellarAddressSchema.safeParse(normalized);
     if (!parsed.success) {
       throw new Error(parsed.error.errors.map((e) => e.message).join("; "));
     }

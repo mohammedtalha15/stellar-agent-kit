@@ -15,7 +15,7 @@ export declare const tools: ({
     }>;
     execute: ({ address, network, }: {
         address: string;
-        network: "testnet" | "mainnet";
+        network?: "testnet" | "mainnet";
     }) => Promise<{
         balances: import("../core/stellarClient.js").BalanceEntry[];
     }>;

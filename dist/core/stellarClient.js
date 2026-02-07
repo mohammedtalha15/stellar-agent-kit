@@ -1,4 +1,4 @@
-import { Keypair, Operation, TransactionBuilder, Asset, BASE_FEE, Networks, Horizon, } from "@stellar/stellar-sdk";
+import { Keypair, Operation, TransactionBuilder, Asset, BASE_FEE, Networks, Horizon, StrKey, } from "@stellar/stellar-sdk";
 import { z } from "zod";
 const StellarAddressSchema = z
     .string()
@@ -26,7 +26,11 @@ export class StellarClient {
      * Fetch all balances for an account (XLM + trust lines).
      */
     async getBalance(address) {
-        const parsed = StellarAddressSchema.safeParse(address);
+        const normalized = address.trim();
+        if (!StrKey.isValidEd25519PublicKey(normalized)) {
+            throw new Error("Stellar address has invalid checksum or format. Check for typos or extra spaces; use a 56-character key starting with G.");
+        }
+        const parsed = StellarAddressSchema.safeParse(normalized);
         if (!parsed.success) {
             throw new Error(parsed.error.errors.map((e) => e.message).join("; "));
         }

@@ -17,7 +17,7 @@
  * 3) Uses rpc.Server (Soroban RPC) from @stellar/stellar-sdk for simulation and sendTransaction.
  */
 import { z } from "zod";
-import { Contract, Address, Keypair, TransactionBuilder, Networks, nativeToScVal, xdr, } from "@stellar/stellar-sdk";
+import { Contract, Address, Keypair, TransactionBuilder, Networks, nativeToScVal, xdr, StrKey, } from "@stellar/stellar-sdk";
 import { rpc } from "@stellar/stellar-sdk";
 import { getNetworkConfig } from "../config/networks.js";
 export const AssetSchema = z.object({
@@ -34,6 +34,8 @@ export const QuoteResponseSchema = z.object({
 // ---------------------------------------------------------------------------
 const SOROSWAP_AGGREGATOR_TESTNET = "CCJUD55AG6W5HAI5LRVNKAE5WDP5XGZBUDS5WNTIVDU7O264UZZE7BRD";
 const SOROSWAP_AGGREGATOR_MAINNET = "CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH";
+/** Valid G address for simulation source (previous "system" account had invalid checksum). */
+const SIMULATION_SOURCE_FALLBACK = "GBZOFW7UOPKDWHMFZT4IMUDNAHIM4KMABHTOKEJYFFYCOXLARMMSBLBE";
 /** Known testnet token contract IDs for quick tests (SoroSwap docs). */
 export const TESTNET_ASSETS = {
     XLM: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
@@ -61,8 +63,9 @@ export class SoroSwapClient {
      * Get a swap quote: expected in/out, minOut, route.
      * Uses SoroSwap aggregator: first tries REST API (if API key set), then falls back to
      * simulating an aggregator contract call via Soroban RPC (view-style invocation).
+     * @param sourceAddress - Optional valid G address for contract simulation source; if invalid, a fallback is used.
      */
-    async getQuote(fromAsset, toAsset, amount) {
+    async getQuote(fromAsset, toAsset, amount, sourceAddress) {
         const fromParsed = AssetSchema.safeParse(fromAsset);
         const toParsed = AssetSchema.safeParse(toAsset);
         if (!fromParsed.success) {
@@ -76,9 +79,19 @@ export class SoroSwapClient {
             throw new Error("Amount must be a non-negative integer string (raw units)");
         }
         if (this.apiKey) {
-            return this.getQuoteViaApi(fromParsed.data.contractId, toParsed.data.contractId, amountStr);
+            try {
+                return await this.getQuoteViaApi(fromParsed.data.contractId, toParsed.data.contractId, amountStr);
+            }
+            catch (apiErr) {
+                const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+                const isTestnet = this.networkConfig.horizonUrl.includes("testnet");
+                if (isTestnet && (msg.includes("invalid checksum") || msg.includes("invalid encoded"))) {
+                    return this.getQuoteViaContract(fromParsed.data, toParsed.data, amountStr, sourceAddress);
+                }
+                throw apiErr;
+            }
         }
-        return this.getQuoteViaContract(fromParsed.data, toParsed.data, amountStr);
+        return this.getQuoteViaContract(fromParsed.data, toParsed.data, amountStr, sourceAddress);
     }
     async getQuoteViaApi(assetIn, assetOut, amount) {
         const network = this.networkConfig.horizonUrl.includes("testnet") ? "testnet" : "mainnet";
@@ -103,6 +116,9 @@ export class SoroSwapClient {
         });
         if (!res.ok) {
             const text = await res.text();
+            if (res.status === 400 && text.includes("No path found")) {
+                throw new Error("No liquidity path found for this pair on this network. Try a different pair or amount, or try again later.");
+            }
             let message = `SoroSwap API error ${res.status}: ${text}`;
             if (res.status === 403) {
                 message =
@@ -117,8 +133,15 @@ export class SoroSwapClient {
      * Fallback: simulate aggregator contract call via Soroban RPC.
      * Contract ID and invoke signature are from research; exact method name may vary.
      * If the aggregator exposes a view (e.g. get_amounts_out), we build a read-only invoke and parse result.
+     * Uses sourceAddress for getAccount when valid; otherwise a valid fallback (previous literal had invalid checksum).
      */
-    async getQuoteViaContract(fromAsset, toAsset, amount) {
+    async getQuoteViaContract(fromAsset, toAsset, amount, sourceAddress) {
+        if (!StrKey.isValidContract(fromAsset.contractId)) {
+            throw new Error(`Invalid token contract ID (from): checksum or format error. Got: ${fromAsset.contractId.slice(0, 12)}...`);
+        }
+        if (!StrKey.isValidContract(toAsset.contractId)) {
+            throw new Error(`Invalid token contract ID (to): checksum or format error. Got: ${toAsset.contractId.slice(0, 12)}...`);
+        }
         const contractId = this.networkConfig.horizonUrl.includes("testnet")
             ? SOROSWAP_AGGREGATOR_TESTNET
             : SOROSWAP_AGGREGATOR_MAINNET;
@@ -136,8 +159,17 @@ export class SoroSwapClient {
         const networkPassphrase = this.networkConfig.horizonUrl.includes("testnet")
             ? Networks.TESTNET
             : Networks.PUBLIC;
-        const sourceAccount = await this.sorobanServer.getAccount("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHF" // system account for simulation
-        );
+        const simSource = sourceAddress?.trim() && StrKey.isValidEd25519PublicKey(sourceAddress.trim())
+            ? sourceAddress.trim()
+            : SIMULATION_SOURCE_FALLBACK;
+        let sourceAccount;
+        try {
+            sourceAccount = await this.sorobanServer.getAccount(simSource);
+        }
+        catch (getAccErr) {
+            const m = getAccErr instanceof Error ? getAccErr.message : String(getAccErr);
+            throw new Error(`Quote simulation needs a funded account. ${m}. Set SOROSWAP_API_KEY for API-based quotes.`);
+        }
         const tx = new TransactionBuilder(sourceAccount, {
             fee: "10000",
             networkPassphrase,
@@ -151,10 +183,20 @@ export class SoroSwapClient {
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            throw new Error(`SoroSwap quote simulation failed (aggregator may use different method/args): ${msg}. Set SOROSWAP_API_KEY for API-based quotes.`);
+            const useApi = "Quote via contract is not available. Set SOROSWAP_API_KEY for API-based quotes.";
+            if (msg.includes("MismatchingParameterLen") || msg.includes("UnexpectedSize")) {
+                throw new Error(useApi);
+            }
+            throw new Error(`SoroSwap quote simulation failed: ${msg}. ${useApi}`);
         }
         if ("error" in sim && sim.error) {
-            throw new Error(`SoroSwap quote simulation error: ${JSON.stringify(sim.error)}. Use SOROSWAP_API_KEY for API quotes.`);
+            const errStr = JSON.stringify(sim.error);
+            const useApi = "Set SOROSWAP_API_KEY for API-based quotes.";
+            if (errStr.includes("MismatchingParameterLen") ||
+                errStr.includes("UnexpectedSize")) {
+                throw new Error(`Quote via contract not supported for this aggregator. ${useApi}`);
+            }
+            throw new Error(`SoroSwap quote simulation error: ${errStr}. ${useApi}`);
         }
         const result = sim;
         const retvalB64 = result?.result?.retval;
@@ -182,11 +224,15 @@ export class SoroSwapClient {
      * Execute a swap: build (from quote), sign with fromSecret, submit via Soroban RPC.
      */
     async executeSwap(fromSecret, quote, network) {
+        const secret = fromSecret.trim();
+        if (secret.length === 56 && secret.startsWith("G")) {
+            throw new Error("Expected a secret key (S...) to execute the swap, but received a public address (G...). For a quote only, do not provide a secret key.");
+        }
         const config = getNetworkConfig(network);
         const server = new rpc.Server(config.sorobanRpcUrl, {
             allowHttp: config.sorobanRpcUrl.startsWith("http:"),
         });
-        const keypair = Keypair.fromSecret(fromSecret);
+        const keypair = Keypair.fromSecret(secret);
         const fromAddress = keypair.publicKey();
         if (!this.apiKey) {
             throw new Error("executeSwap requires SoroSwap API to build the transaction. Set SOROSWAP_API_KEY.");

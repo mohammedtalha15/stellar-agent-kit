@@ -63,6 +63,10 @@ async function runOneTool(name, args) {
     }
     catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'cliAgent.ts:runOneTool', message: 'tool error', data: { name, errMsg: message, stack: (stack || '').slice(0, 500) }, hypothesisId: 'H2', timestamp: Date.now() }) }).catch(() => { });
+        // #endregion
         return JSON.stringify({ error: message });
     }
 }

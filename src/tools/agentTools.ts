@@ -47,15 +47,16 @@ export const tools = [
     }),
     execute: async ({
       address,
-      network,
+      network = "testnet",
     }: {
       address: string;
-      network: "testnet" | "mainnet";
+      network?: "testnet" | "mainnet";
     }) => {
+      const net = network ?? "testnet";
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'agentTools.ts:check_balance',message:'check_balance params',data:{address,network},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'agentTools.ts:check_balance',message:'check_balance params',data:{address,network:net},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
       // #endregion
-      const config = getNetworkConfig(network);
+      const config = getNetworkConfig(net);
       const client = new StellarClient(config);
       const balances = await client.getBalance(address);
       return { balances };
@@ -93,18 +94,40 @@ export const tools = [
       network: "testnet" | "mainnet";
       privateKey?: string;
     }) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'agentTools.ts:swap_asset',message:'swap params',data:{fromAsset,toAsset,addressLen:address?.length,addressTrimmed:address?.trim?.()?.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const config = getNetworkConfig(network);
       const soroSwapClient = new SoroSwapClient(config);
 
-      const from = resolveAssetSymbol(fromAsset, network);
-      const to = resolveAssetSymbol(toAsset, network);
-      const rawAmount = toRawAmount(amount, fromAsset);
+      const from = resolveAssetSymbol(fromAsset.trim(), network);
+      const to = resolveAssetSymbol(toAsset.trim(), network);
+      const rawAmount = toRawAmount(amount, fromAsset.trim());
 
-      const quote: QuoteResponse = await soroSwapClient.getQuote(
-        from,
-        to,
-        rawAmount
-      );
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/3d1882c5-dc48-494c-98b8-3a0080ef9d74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'agentTools.ts:swap before getQuote',message:'quote params',data:{fromId:from.contractId,toId:to.contractId},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      let quote: QuoteResponse;
+      try {
+        quote = await soroSwapClient.getQuote(from, to, rawAmount, address?.trim());
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("invalid checksum") || msg.includes("invalid encoded")) {
+          throw new Error(
+            "Swap quote failed: invalid key or contract format. Use testnet, XLM/USDC, no secret key for quote only."
+          );
+        }
+        if (
+          msg.includes("SOROSWAP_API_KEY") ||
+          msg.includes("Quote via contract") ||
+          msg.includes("MismatchingParameterLen")
+        ) {
+          throw new Error(
+            "Swap quotes need SOROSWAP_API_KEY. Get an API key from the SoroSwap console and set it to get XLM/USDC quotes."
+          );
+        }
+        throw err;
+      }
 
       if (!privateKey) {
         return {
@@ -115,11 +138,18 @@ export const tools = [
         };
       }
 
-      const result = await soroSwapClient.executeSwap(
-        privateKey,
-        quote,
-        network
-      );
+      let result: { hash: string; status: string };
+      try {
+        result = await soroSwapClient.executeSwap(privateKey, quote, network);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("invalid checksum") || msg.includes("invalid encoded")) {
+          throw new Error(
+            "Swap execution failed: use secret key (S...) not address (G...), or omit for quote only."
+          );
+        }
+        throw err;
+      }
 
       return {
         success: true as const,

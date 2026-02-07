@@ -68,13 +68,15 @@ export declare class SoroSwapClient {
      * Get a swap quote: expected in/out, minOut, route.
      * Uses SoroSwap aggregator: first tries REST API (if API key set), then falls back to
      * simulating an aggregator contract call via Soroban RPC (view-style invocation).
+     * @param sourceAddress - Optional valid G address for contract simulation source; if invalid, a fallback is used.
      */
-    getQuote(fromAsset: Asset, toAsset: Asset, amount: string): Promise<QuoteResponse>;
+    getQuote(fromAsset: Asset, toAsset: Asset, amount: string, sourceAddress?: string): Promise<QuoteResponse>;
     private getQuoteViaApi;
     /**
      * Fallback: simulate aggregator contract call via Soroban RPC.
      * Contract ID and invoke signature are from research; exact method name may vary.
      * If the aggregator exposes a view (e.g. get_amounts_out), we build a read-only invoke and parse result.
+     * Uses sourceAddress for getAccount when valid; otherwise a valid fallback (previous literal had invalid checksum).
      */
     private getQuoteViaContract;
     /**
