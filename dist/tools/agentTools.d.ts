@@ -64,5 +64,75 @@ export declare const tools: ({
         quote: QuoteResponse;
         message?: undefined;
     }>;
+} | {
+    name: string;
+    description: string;
+    parameters: z.ZodObject<{
+        address: z.ZodString;
+        assetCode: z.ZodString;
+        network: z.ZodDefault<z.ZodEnum<["testnet", "mainnet"]>>;
+        privateKey: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        address: string;
+        network: "testnet" | "mainnet";
+        privateKey: string;
+        assetCode: string;
+    }, {
+        address: string;
+        privateKey: string;
+        assetCode: string;
+        network?: "testnet" | "mainnet" | undefined;
+    }>;
+    execute: ({ address, assetCode, network, privateKey, }: {
+        address: string;
+        assetCode: string;
+        network: "testnet" | "mainnet";
+        privateKey: string;
+    }) => Promise<{
+        success: true;
+        message: string;
+        existing: boolean;
+        txHash?: undefined;
+    } | {
+        success: true;
+        txHash: string;
+        message: string;
+        existing: boolean;
+    }>;
+} | {
+    name: string;
+    description: string;
+    parameters: z.ZodObject<{
+        fromAsset: z.ZodString;
+        toAsset: z.ZodString;
+        amount: z.ZodString;
+        network: z.ZodDefault<z.ZodEnum<["testnet", "mainnet"]>>;
+    }, "strip", z.ZodTypeAny, {
+        network: "testnet" | "mainnet";
+        fromAsset: string;
+        toAsset: string;
+        amount: string;
+    }, {
+        fromAsset: string;
+        toAsset: string;
+        amount: string;
+        network?: "testnet" | "mainnet" | undefined;
+    }>;
+    execute: ({ fromAsset, toAsset, amount, network, }: {
+        fromAsset: string;
+        toAsset: string;
+        amount: string;
+        network: "testnet" | "mainnet";
+    }) => Promise<{
+        success: true;
+        quote: {
+            fromAsset: string;
+            toAsset: string;
+            amountIn: string;
+            amountOut: string;
+            route: string[];
+        };
+        message: string;
+    }>;
 })[];
 //# sourceMappingURL=agentTools.d.ts.map

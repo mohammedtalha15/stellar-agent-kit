@@ -52,6 +52,40 @@ function toOpenAITools(): ChatCompletionTool[] {
         },
       },
     },
+    {
+      type: "function",
+      function: {
+        name: "create_trustline",
+        description: "Create trustline to receive tokens like USDC",
+        parameters: {
+          type: "object",
+          properties: {
+            address: { type: "string", description: "Stellar address" },
+            assetCode: { type: "string", description: "Asset code (USDC)" },
+            network: { type: "string", enum: ["testnet", "mainnet"] },
+            privateKey: { type: "string", description: "Complete 56-character secret key starting with S" },
+          },
+          required: ["address", "assetCode", "network", "privateKey"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_swap_quote",
+        description: "Get swap quote without executing",
+        parameters: {
+          type: "object",
+          properties: {
+            fromAsset: { type: "string", description: "From asset (XLM or USDC)" },
+            toAsset: { type: "string", description: "To asset (XLM or USDC)" },
+            amount: { type: "string", description: "Amount to swap" },
+            network: { type: "string", enum: ["testnet", "mainnet"] },
+          },
+          required: ["fromAsset", "toAsset", "amount", "network"],
+        },
+      },
+    },
   ];
 }
 
@@ -68,7 +102,12 @@ function readLine(prompt: string): Promise<string> {
 
 /** Execute tool by name with parsed args; return string for the model. */
 async function runOneTool(name: string, args: Record<string, unknown>): Promise<string> {
-  console.log(`[DEBUG] Tool called: ${name} with args:`, JSON.stringify(args, null, 2));
+  // Hide private keys in debug output for security
+  const safeArgs = { ...args };
+  if (safeArgs.privateKey) {
+    safeArgs.privateKey = safeArgs.privateKey.toString().slice(0, 8) + "...";
+  }
+  console.log(`[DEBUG] Tool called: ${name} with args:`, JSON.stringify(safeArgs, null, 2));
   const tool = tools.find((t) => t.name === name);
   if (!tool) return JSON.stringify({ error: `Unknown tool: ${name}` });
   try {

@@ -16,7 +16,7 @@ export const testnet: NetworkConfig = {
 
 export const mainnet: NetworkConfig = {
   horizonUrl: "https://horizon.stellar.org",
-  sorobanRpcUrl: "https://soroban-mainnet.stellar.org",
+  sorobanRpcUrl: "https://soroban-rpc.mainnet.stellar.gateway.fm",
 };
 
 export const networks = {
