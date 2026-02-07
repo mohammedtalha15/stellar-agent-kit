@@ -1,0 +1,108 @@
+import { Keypair, Operation, TransactionBuilder, Asset, BASE_FEE, Networks, Horizon, } from "@stellar/stellar-sdk";
+import { z } from "zod";
+const StellarAddressSchema = z
+    .string()
+    .min(56)
+    .max(56)
+    .regex(/^G[A-Z2-7]{55}$/, "Invalid Stellar public key (G...)");
+const SecretKeySchema = z
+    .string()
+    .min(56)
+    .max(56)
+    .regex(/^S[A-Z2-7]{55}$/, "Invalid Stellar secret key (S...)");
+const AmountSchema = z.string().regex(/^\d+(\.\d+)?$/, "Amount must be a positive number");
+/**
+ * Stellar client for account queries and payment submission.
+ * Uses Horizon for classic operations (balance, payments).
+ */
+export class StellarClient {
+    server;
+    config;
+    constructor(config) {
+        this.config = config;
+        this.server = new Horizon.Server(config.horizonUrl);
+    }
+    /**
+     * Fetch all balances for an account (XLM + trust lines).
+     */
+    async getBalance(address) {
+        const parsed = StellarAddressSchema.safeParse(address);
+        if (!parsed.success) {
+            throw new Error(parsed.error.errors.map((e) => e.message).join("; "));
+        }
+        const account = await this.server
+            .accounts()
+            .accountId(parsed.data)
+            .call()
+            .catch((err) => {
+            const res = err && typeof err === "object" && "response" in err
+                ? err.response
+                : undefined;
+            if (res?.status === 404) {
+                throw new Error(`Account not found: ${address}`);
+            }
+            throw err;
+        });
+        const balances = account.balances.map((b) => {
+            if (b.asset_type === "native") {
+                return {
+                    code: "XLM",
+                    issuer: null,
+                    balance: b.balance,
+                };
+            }
+            const asset = b;
+            return {
+                code: asset.asset_code,
+                issuer: asset.asset_issuer ?? null,
+                balance: asset.balance,
+            };
+        });
+        return balances;
+    }
+    /**
+     * Send a payment (XLM or custom asset).
+     * @param fromSecret - Secret key of sender (S...)
+     * @param to - Destination public key (G...)
+     * @param amount - Amount as string (e.g. "100" or "10.5")
+     * @param assetCode - Optional; if omitted, sends XLM
+     * @param assetIssuer - Required when assetCode is set (issuer G...)
+     */
+    async sendPayment(fromSecret, to, amount, assetCode, assetIssuer) {
+        const secretParsed = SecretKeySchema.safeParse(fromSecret);
+        if (!secretParsed.success) {
+            throw new Error(secretParsed.error.errors.map((e) => e.message).join("; "));
+        }
+        const toParsed = StellarAddressSchema.safeParse(to);
+        if (!toParsed.success) {
+            throw new Error(toParsed.error.errors.map((e) => e.message).join("; "));
+        }
+        const amountParsed = AmountSchema.safeParse(amount);
+        if (!amountParsed.success) {
+            throw new Error(amountParsed.error.errors.map((e) => e.message).join("; "));
+        }
+        const sourceKeypair = Keypair.fromSecret(secretParsed.data);
+        const sourceAccount = await this.server.loadAccount(sourceKeypair.publicKey());
+        const asset = assetCode && assetIssuer
+            ? new Asset(assetCode, assetIssuer)
+            : Asset.native();
+        const op = Operation.payment({
+            destination: toParsed.data,
+            asset,
+            amount: amountParsed.data,
+        });
+        const networkPassphrase = this.config.horizonUrl.includes("testnet")
+            ? Networks.TESTNET
+            : Networks.PUBLIC;
+        const tx = new TransactionBuilder(sourceAccount, {
+            fee: BASE_FEE,
+            networkPassphrase,
+        })
+            .addOperation(op)
+            .setTimeout(30)
+            .build();
+        tx.sign(sourceKeypair);
+        return await this.server.submitTransaction(tx);
+    }
+}
+//# sourceMappingURL=stellarClient.js.map

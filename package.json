@@ -1,0 +1,34 @@
+{
+  "name": "stellar-defi-agent-kit",
+  "version": "1.0.0",
+  "description": "Stellar DeFi agent kit for hackathon - balance checks and payments with CLI",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "stellar-defi-agent-kit": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "balance": "node dist/index.js balance",
+    "pay": "node dist/index.js pay",
+    "start": "node dist/index.js",
+    "check": "node -e \"import('./dist/core/stellarClient.js').then(m => console.log('✅ StellarClient imported')).catch(e => { console.error(e); process.exit(1); })\"",
+    "precheck": "npm run build"
+  },
+  "keywords": ["stellar", "soroban", "defi", "blockchain", "cli"],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^14.0.0",
+    "commander": "^12.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
