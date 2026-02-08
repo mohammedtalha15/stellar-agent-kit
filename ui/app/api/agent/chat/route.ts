@@ -103,6 +103,12 @@ async function runTool(
         { contractId: toId },
         rawAmount
       )
+      // Decimals: XLM and Stellar USDC both use 7. Use human-readable amounts so the LLM does not show raw units (e.g. 325718) as "325,718 USDC".
+      const fromDecimals = 7
+      const toDecimals = 7
+      const expectedInHuman = (parseInt(quote.expectedIn, 10) / Math.pow(10, fromDecimals)).toFixed(Math.min(fromDecimals, 7))
+      const expectedOutHuman = (parseInt(quote.expectedOut, 10) / Math.pow(10, toDecimals)).toFixed(Math.min(toDecimals, 7))
+      const minOutHuman = (parseInt(quote.minOut, 10) / Math.pow(10, toDecimals)).toFixed(Math.min(toDecimals, 7))
       return JSON.stringify({
         fromAsset,
         toAsset,
@@ -110,10 +116,13 @@ async function runTool(
         expectedIn: quote.expectedIn,
         expectedOut: quote.expectedOut,
         minOut: quote.minOut,
+        expectedInHuman,
+        expectedOutHuman,
+        minOutHuman,
         route: quote.route,
         protocol: quote.protocol,
         rawData: quote.rawData ?? quote,
-        note: "You can tell the user they can execute this swap with the Approve button below.",
+        note: "When telling the user the quote, use expectedInHuman and expectedOutHuman (these are in display units, e.g. 0.33 USDC). Do not use expectedIn/expectedOut which are raw smallest units. You can tell the user they can execute this swap with the Approve button below.",
       })
     }
     return JSON.stringify({ error: `Unknown tool: ${name}` })
