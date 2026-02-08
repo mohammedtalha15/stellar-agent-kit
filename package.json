@@ -20,7 +20,8 @@
     "build:mcp": "npm run build -w packages/stellar-devkit-mcp",
     "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
     "dev:sdk-fe": "npm run dev -w sdk-fe --if-present",
-    "dev:ui": "npm run dev -w ui"
+    "dev:ui": "npm run dev -w ui",
+    "publish:packages": "npm run build:agent-kit && npm run build:x402 && npm run build:create-app && npm run build:mcp && npm publish -w stellar-agent-kit && npm publish -w x402-stellar-sdk && npm publish -w create-stellar-devkit-app && npm publish -w stellar-devkit-mcp"
   },
   "engines": {
     "node": ">=18"

@@ -1,6 +1,6 @@
 {
   "name": "create-stellar-devkit-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Scaffold Stellar DevKit apps – Agent Kit or x402 API",
   "type": "module",
   "bin": "./dist/index.js",

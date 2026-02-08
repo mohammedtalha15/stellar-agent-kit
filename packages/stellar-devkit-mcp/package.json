@@ -1,6 +1,6 @@
 {
   "name": "stellar-devkit-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for Stellar DevKit – docs, contract addresses, code snippets",
   "type": "module",
   "bin": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "stellar-agent-kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unified TypeScript SDK for Stellar DeFi – DEX, lending, oracles, payments",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

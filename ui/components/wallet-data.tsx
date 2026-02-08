@@ -89,21 +89,21 @@ export function WalletData() {
         </div>
         <DropdownMenuItem 
           onClick={copyAddress} 
-          className="gap-2 text-white focus:bg-white/10 cursor-pointer"
+          className="gap-2 text-white cursor-pointer "
         >
           <Copy className="h-4 w-4" />
           Copy Address
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={openInExplorer} 
-          className="gap-2 text-white focus:bg-white/10 cursor-pointer"
+          className="gap-2 text-white cursor-pointer "
         >
           <ExternalLink className="h-4 w-4" />
           View in Explorer
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={handleDisconnect} 
-          className="gap-2 text-red-400 focus:bg-red-500/10 cursor-pointer"
+          className="gap-2 text-red-400 cursor-pointer "
         >
           <LogOut className="h-4 w-4" />
           Disconnect

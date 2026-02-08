@@ -1,6 +1,6 @@
 {
   "name": "x402-stellar-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "HTTP 402 payment-gated APIs with Stellar payments",
   "type": "module",
   "main": "./dist/index.js",
