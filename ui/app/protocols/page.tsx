@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ExternalLink, Copy, Check, ChevronDown, ChevronUp, Code2, Swap, Landmark, LineChart, Layers, Bridge, Vote } from "lucide-react"
+import { ExternalLink, Copy, Check, ChevronDown, ChevronUp, Code2, ArrowLeftRight, Landmark, LineChart, Layers, Link2, Vote } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { PageTransition } from "@/components/page-transition"
 import {
@@ -44,7 +44,7 @@ const PROTOCOLS: Protocol[] = [
     network: "Mainnet",
     contractId: SOROSWAP_AGGREGATOR,
     methods: ["dexGetQuote()", "dexSwap()", "dexSwapExactIn()"],
-    icon: <Swap className="h-6 w-6 text-[#a78bfa]" />,
+    icon: <ArrowLeftRight className="h-6 w-6 text-[#a78bfa]" />,
   },
   {
     id: "blend",
@@ -68,7 +68,7 @@ const PROTOCOLS: Protocol[] = [
     network: "Mainnet",
     contractId: null,
     methods: ["send()", "rawTxBuilder.send()", "getBalanceLine()", "buildChangeTrustLineXdrTx()"],
-    icon: <Bridge className="h-6 w-6 text-[#a78bfa]" />,
+    icon: <Link2 className="h-6 w-6 text-[#a78bfa]" />,
   },
   {
     id: "fxdao",
