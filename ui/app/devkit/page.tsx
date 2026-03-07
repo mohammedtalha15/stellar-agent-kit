@@ -15,7 +15,10 @@ import {
   Wallet,
   RefreshCw,
   FileStack,
+  Lock,
+  ArrowRight,
 } from "lucide-react"
+import Link from "next/link"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button"
@@ -274,8 +277,8 @@ export default function DevKitPage() {
                       </div>
 
                       <div className="mt-6">
-                        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">API Endpoint</p>
-                        <p className="text-xs text-zinc-500 mb-2">Use this endpoint in your server SDK configuration.</p>
+                        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Validation Endpoint</p>
+                        <p className="text-xs text-zinc-500 mb-2">Use this in your server SDK to verify your App ID is active.</p>
                         <div className="flex gap-2 items-center">
                           <code className="flex-1 min-w-0 truncate rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-2.5 text-sm font-mono text-zinc-300">
                             {apiEndpoint}
@@ -411,6 +414,23 @@ export default function DevKitPage() {
                     <LiquidMetalButton label="+ Create Project" onClick={createProject} width={180} />
                   </div>
                 )}
+
+                {/* x402 callout */}
+                <Link
+                  href="/x402"
+                  className="group flex items-center justify-between rounded-2xl border border-violet-500/30 bg-violet-500/5 hover:border-violet-500/60 hover:bg-violet-500/10 px-6 py-5 transition-all duration-200"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10">
+                      <Lock className="h-5 w-5 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">x402 Payment Wall</p>
+                      <p className="text-xs text-zinc-400">Try the live demo — gate an API route behind a Stellar payment</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-zinc-500 group-hover:text-violet-400 transition-colors shrink-0" />
+                </Link>
               </TabsContent>
 
               {/* ─── MCP tab ───────────────────────────────────────────────── */}

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { isAppIdValid } from "@/lib/projectStore"
 import { getPlanForOrder, setPlanForAppId, type PlanId } from "@/lib/subscription-store"
+import { setPlanCredits, PLAN_MONTHLY_CREDITS } from "@/lib/credits-store"
 
 /**
- * Link a DevKit appId to a successful payment so the appId gets an active plan.
+ * Link a DevKit appId to a successful payment so the appId gets an active plan and credits.
  * Call after the user has paid (paymentId from Dodo return) and has a registered project (appId).
  * Body: { appId: string, paymentId: string }
  */
@@ -41,7 +42,14 @@ export async function POST(request: Request) {
     }
 
     setPlanForAppId(appId.trim(), plan)
-    return NextResponse.json({ ok: true, appId: appId.trim(), plan })
+    await setPlanCredits(appId.trim(), plan)
+
+    return NextResponse.json({
+      ok: true,
+      appId: appId.trim(),
+      plan,
+      credits: PLAN_MONTHLY_CREDITS[plan],
+    })
   } catch {
     return NextResponse.json({ error: "Bad request" }, { status: 400 })
   }

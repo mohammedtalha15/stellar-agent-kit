@@ -87,6 +87,10 @@ export function LiquidMetalButton({
       const style = document.createElement("style")
       style.id = styleId
       style.textContent = `
+        .shader-container-exploded {
+          border-radius: 100px;
+          overflow: hidden;
+        }
         .shader-container-exploded canvas {
           width: 100% !important;
           height: 100% !important;
@@ -95,6 +99,7 @@ export function LiquidMetalButton({
           top: 0 !important;
           left: 0 !important;
           border-radius: 100px !important;
+          clip-path: inset(0 round 100px) !important;
         }
         @keyframes ripple-animation {
           0% {
@@ -354,6 +359,7 @@ export function LiquidMetalButton({
                   height: `${dimensions.height}px`,
                   width: toPx(dimensions.width),
                   borderRadius: "100px",
+                  overflow: "hidden",
                   boxShadow: isPressed
                     ? "0 0 0 1px rgba(255,255,255,0.12), 0px 0px 0px 1px rgba(0, 0, 0, 0.5), 0px 1px 2px 0px rgba(0, 0, 0, 0.3)"
                     : isHovered

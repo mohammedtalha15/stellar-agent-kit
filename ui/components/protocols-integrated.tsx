@@ -84,6 +84,7 @@ export function ProtocolsIntegratedSection() {
           href="/protocols"
           label="View all protocols"
           width={220}
+          noGradient
         />
       </div>
     </section>

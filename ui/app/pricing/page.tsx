@@ -7,7 +7,7 @@ import { Navbar } from "@/components/navbar"
 import { PageTransition } from "@/components/page-transition"
 import { Button } from "@/components/ui/button"
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button"
-import { Check, X } from "lucide-react"
+import { Check, X, Zap, Gift } from "lucide-react"
 
 const PLANS = [
   {
@@ -15,7 +15,8 @@ const PLANS = [
     name: "Free",
     price: "0",
     period: "forever",
-    features: ["Agent Kit basics", "x402 server/client docs", "Community support"],
+    credits: 100,
+    features: ["100 credits / month", "Agent Kit basics", "x402 server/client docs", "Community support"],
     cta: "Get started",
     href: "/devkit",
     primary: false,
@@ -23,23 +24,34 @@ const PLANS = [
   {
     id: "builder",
     name: "Builder",
-    price: "499",
-    currency: "₹",
+    price: "9",
+    currency: "$",
     period: "/month",
-    features: ["Everything in Free", "Pro templates in CLI", "Priority snippets", "Email support"],
+    credits: 5000,
+    features: ["5,000 credits / month", "Everything in Free", "Pro templates in CLI", "Priority snippets", "Email support"],
     cta: "Upgrade",
     primary: true,
   },
   {
     id: "pro",
     name: "Pro",
-    price: "999",
-    currency: "₹",
+    price: "19",
+    currency: "$",
     period: "/month",
-    features: ["Everything in Builder", "Advanced DEX examples", "Dedicated support", "Early access"],
+    credits: 25000,
+    features: ["25,000 credits / month", "Everything in Builder", "Advanced DEX examples", "Dedicated support", "Early access"],
     cta: "Upgrade",
     primary: false,
   },
+]
+
+const CREDIT_COSTS = [
+  { op: "Agent chat message", cost: "1 credit" },
+  { op: "Swap quote", cost: "1 credit" },
+  { op: "Swap build / execute", cost: "2–5 credits" },
+  { op: "Send payment", cost: "1–3 credits" },
+  { op: "Lending (supply / borrow)", cost: "3 credits" },
+  { op: "Balance / price check", cost: "Free" },
 ]
 
 const INLINE_CONTAINER_ID = "dodo-inline-checkout"
@@ -160,6 +172,39 @@ export default function PricingPage() {
   const [linkDone, setLinkDone] = useState(false)
   const [linkError, setLinkError] = useState<string | null>(null)
 
+  // Promo code redemption
+  const [promoCode, setPromoCode] = useState("")
+  const [promoAppId, setPromoAppId] = useState("")
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoResult, setPromoResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const redeemPromo = async () => {
+    if (!promoCode.trim() || !promoAppId.trim()) {
+      setPromoResult({ ok: false, msg: "Enter both your App ID and promo code." })
+      return
+    }
+    setPromoLoading(true)
+    setPromoResult(null)
+    try {
+      const res = await fetch("/api/credits/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-app-id": promoAppId.trim() },
+        body: JSON.stringify({ code: promoCode.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setPromoResult({ ok: false, msg: data.error ?? "Redemption failed" })
+      } else {
+        setPromoResult({ ok: true, msg: `${data.creditsAdded} credits added! New balance: ${data.newBalance}` })
+        setPromoCode("")
+      }
+    } catch {
+      setPromoResult({ ok: false, msg: "Something went wrong" })
+    } finally {
+      setPromoLoading(false)
+    }
+  }
+
   const handleLinkPlan = async () => {
     const paymentId = typeof window !== "undefined" ? window.localStorage.getItem("stellar_devkit_plan_order") : null
     if (!paymentId || !linkAppId.trim()) {
@@ -193,9 +238,13 @@ export default function PricingPage() {
       <PageTransition>
         <div className="pt-32 pb-20 px-6 max-w-5xl mx-auto">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white text-center mb-4">Pricing</h1>
-          <p className="text-zinc-400 text-center mb-12 max-w-xl mx-auto">
-            Choose the plan that fits your build. Upgrade anytime to unlock Pro templates and support.
+          <p className="text-zinc-400 text-center mb-4 max-w-xl mx-auto">
+            Choose the plan that fits your build. Credits are consumed per API call — unused credits roll over within the month.
           </p>
+          <div className="flex items-center justify-center gap-1.5 mb-12">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm text-zinc-400">Credits refresh monthly with your plan.</span>
+          </div>
           {showSuccess && (
             <div className="mb-6 p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-4">
               <p className="text-emerald-400 text-sm text-center font-medium">Payment successful. Your plan is now active.</p>
@@ -265,6 +314,7 @@ export default function PricingPage() {
                       onClick={() => openDodoCheckout(plan.id)}
                       disabled={!!loading}
                       fullWidth
+                      noGradient
                     />
                   ) : (
                     <Button
@@ -307,9 +357,61 @@ export default function PricingPage() {
             </div>
           )}
 
+          {/* Credit costs table */}
+          <div className="mt-16 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+            <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-400" /> Credit costs per operation
+            </h2>
+            <p className="text-sm text-zinc-400 mb-5">Each API call consumes credits from your balance. Balance checks and price lookups are always free.</p>
+            <div className="grid sm:grid-cols-2 gap-x-10 gap-y-2">
+              {CREDIT_COSTS.map(({ op, cost }) => (
+                <div key={op} className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0">
+                  <span className="text-sm text-zinc-300">{op}</span>
+                  <span className={`text-sm font-medium ${cost === "Free" ? "text-emerald-400" : "text-yellow-400"}`}>{cost}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Promo code redemption */}
+          <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+            <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+              <Gift className="w-4 h-4 text-violet-400" /> Have a promo code?
+            </h2>
+            <p className="text-sm text-zinc-400 mb-4">Enter your DevKit App ID and promo code to redeem free credits.</p>
+            <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
+              <input
+                type="text"
+                value={promoAppId}
+                onChange={(e) => setPromoAppId(e.target.value)}
+                placeholder="Your App ID"
+                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500"
+              />
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                placeholder="PROMO CODE"
+                className="w-40 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-mono text-white placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500"
+              />
+              <Button
+                type="button"
+                onClick={redeemPromo}
+                disabled={promoLoading}
+                className="shrink-0 rounded-lg"
+              >
+                {promoLoading ? "Redeeming…" : "Redeem"}
+              </Button>
+            </div>
+            {promoResult && (
+              <p className={`mt-3 text-sm ${promoResult.ok ? "text-emerald-400" : "text-red-400"}`}>
+                {promoResult.msg}
+              </p>
+            )}
+          </div>
+
           <p className="mt-8 text-center text-sm text-zinc-500">
-            Payments powered by Dodo Payments. After payment we store your plan; use the same session or pass
-            payment_id for API gating.
+            Payments powered by Dodo Payments. Credits are tied to your App ID and persist across sessions.
           </p>
         </div>
       </PageTransition>
