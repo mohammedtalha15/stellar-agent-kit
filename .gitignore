@@ -1,15 +1,7 @@
-# Dependencies - never commit
-node_modules/
-**/node_modules/
-
-# Build
-.next/
-
-# Env and secrets
-.env
 .env.local
-.env.*.local
-!.env.example
-
-# Local / scratch
+node_modules
+.next
 /mantle-devkit-main
+.gitignore
+.env.local
+ui/.env.local

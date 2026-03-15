@@ -246,7 +246,7 @@ declare class StellarAgentKit {
 }
 
 /**
- * Stellar asset identifiers and contract addresses (mainnet only).
+ * Stellar asset identifiers and contract addresses (mainnet and testnet).
  */
 type StellarAsset = {
     code: string;
@@ -260,6 +260,15 @@ declare const MAINNET_ASSETS: {
     };
     readonly USDC: {
         readonly contractId: "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75";
+    };
+};
+/** Testnet asset identifiers (contract IDs for wrapped XLM and USDC). */
+declare const TESTNET_ASSETS: {
+    readonly XLM: {
+        readonly contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+    };
+    readonly USDC: {
+        readonly contractId: "CBBHRKEP5M3NUDRISGLJKGHDHX3DA2CN2AZBQY6WLVUJ7VNLGSKBDUCM";
     };
 };
 /** SoroSwap aggregator contract ID (mainnet). */
@@ -286,4 +295,4 @@ declare const FXDAO_MAINNET: {
  */
 declare const ALLBRIDGE_CORE_STELLAR_DOCS: "https://docs-core.allbridge.io/sdk/guides/stellar";
 
-export { ALLBRIDGE_CORE_STELLAR_DOCS, BAND_ORACLE, BLEND_POOLS, BLEND_POOLS_MAINNET, type DexAsset, type DexClient, FXDAO_MAINNET, type LendingBorrowArgs, type LendingResult, type LendingSupplyArgs, MAINNET_ASSETS, type NetworkConfig, type NetworkName, type OracleAsset, type PriceData, type QuoteResult, REFLECTOR_ORACLE, type ReflectorOracle, type ReflectorOracleConfig, SOROSWAP_AGGREGATOR, StellarAgentKit, type StellarAsset, type StellarNetwork, type SwapResult, createDexClient, createReflectorOracle, getNetworkConfig, lendingBorrow, lendingSupply, networks };
+export { ALLBRIDGE_CORE_STELLAR_DOCS, BAND_ORACLE, BLEND_POOLS, BLEND_POOLS_MAINNET, type DexAsset, type DexClient, FXDAO_MAINNET, type LendingBorrowArgs, type LendingResult, type LendingSupplyArgs, MAINNET_ASSETS, type NetworkConfig, type NetworkName, type OracleAsset, type PriceData, type QuoteResult, REFLECTOR_ORACLE, type ReflectorOracle, type ReflectorOracleConfig, SOROSWAP_AGGREGATOR, StellarAgentKit, type StellarAsset, type StellarNetwork, type SwapResult, TESTNET_ASSETS, createDexClient, createReflectorOracle, getNetworkConfig, lendingBorrow, lendingSupply, networks };

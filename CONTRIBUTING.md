@@ -49,7 +49,7 @@ stellar-agent-kit/
 
 ```bash
 # Clone the repo
-git clone https://github.com/stellar/stellar-agent-kit.git
+git clone https://github.com/orbitkit-fun/stellar-agent-kit.git
 cd stellar-agent-kit
 
 # Install root and all workspace dependencies

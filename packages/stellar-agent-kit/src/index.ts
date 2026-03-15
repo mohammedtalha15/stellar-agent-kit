@@ -2,6 +2,7 @@ export { StellarAgentKit, type StellarNetwork } from "./agent.js";
 export { getNetworkConfig, networks, type NetworkConfig, type NetworkName } from "./config/networks.js";
 export {
   MAINNET_ASSETS,
+  TESTNET_ASSETS,
   SOROSWAP_AGGREGATOR,
   type StellarAsset,
 } from "./config/assets.js";

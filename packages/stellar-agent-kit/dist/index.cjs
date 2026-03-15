@@ -29,6 +29,7 @@ __export(index_exports, {
   REFLECTOR_ORACLE: () => REFLECTOR_ORACLE,
   SOROSWAP_AGGREGATOR: () => SOROSWAP_AGGREGATOR,
   StellarAgentKit: () => StellarAgentKit,
+  TESTNET_ASSETS: () => TESTNET_ASSETS,
   createDexClient: () => createDexClient,
   createReflectorOracle: () => createReflectorOracle,
   getNetworkConfig: () => getNetworkConfig,
@@ -516,6 +517,10 @@ var MAINNET_ASSETS = {
   XLM: { contractId: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA" },
   USDC: { contractId: "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75" }
 };
+var TESTNET_ASSETS = {
+  XLM: { contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" },
+  USDC: { contractId: "CBBHRKEP5M3NUDRISGLJKGHDHX3DA2CN2AZBQY6WLVUJ7VNLGSKBDUCM" }
+};
 var SOROSWAP_AGGREGATOR = "CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH";
 
 // src/config/protocols.ts
@@ -540,6 +545,7 @@ var ALLBRIDGE_CORE_STELLAR_DOCS = "https://docs-core.allbridge.io/sdk/guides/ste
   REFLECTOR_ORACLE,
   SOROSWAP_AGGREGATOR,
   StellarAgentKit,
+  TESTNET_ASSETS,
   createDexClient,
   createReflectorOracle,
   getNetworkConfig,
