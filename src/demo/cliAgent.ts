@@ -2,6 +2,55 @@ import { createInterface } from "readline";
 import type { Command } from "commander";
 import { tools } from "../tools/agentTools.js";
 
+const REDACTED = "***redacted***";
+const SECRET_KEY_NAME_RE =
+  /(privatekey|private_key|secret|secretkey|secret_key|seed|mnemonic|apikey|api_key|token|password|passphrase)/i;
+const STELLAR_SECRET_KEY_RE = /^S[A-Z2-7]{55}$/;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function sanitizeForLog(value: unknown, keyHint?: string, depth = 0): unknown {
+  if (depth > 12) return "[MaxDepth]";
+
+  if (typeof value === "string") {
+    if ((keyHint && SECRET_KEY_NAME_RE.test(keyHint)) || STELLAR_SECRET_KEY_RE.test(value)) {
+      return REDACTED;
+    }
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean" || value === null || value === undefined) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitizeForLog(v, keyHint, depth + 1));
+  }
+
+  if (isPlainObject(value)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (SECRET_KEY_NAME_RE.test(k)) {
+        out[k] = REDACTED;
+      } else {
+        out[k] = sanitizeForLog(v, k, depth + 1);
+      }
+    }
+    return out;
+  }
+
+  // For non-plain objects (Error, Date, etc.), avoid dumping internals.
+  try {
+    return String(value);
+  } catch {
+    return "[Unserializable]";
+  }
+}
+
 /** Minimal type for OpenAI-compatible client (avoids duplicate module resolution with dynamic import). */
 type OpenAIClient = {
   chat: {
@@ -106,7 +155,7 @@ function toOpenAITools(): ChatCompletionTool[] {
 function readLine(prompt: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
-    rl.question(prompt, (answer) => {
+    rl.question(prompt, (answer: string) => {
       rl.close();
       resolve(answer.trim());
     });
@@ -114,13 +163,11 @@ function readLine(prompt: string): Promise<string> {
 }
 
 /** Execute tool by name with parsed args; return string for the model. */
-async function runOneTool(name: string, args: Record<string, unknown>): Promise<string> {
-  // Hide private keys in debug output for security
-  const safeArgs = { ...args };
-  if (safeArgs.privateKey) {
-    safeArgs.privateKey = safeArgs.privateKey.toString().slice(0, 8) + "...";
+async function runOneTool(name: string, args: Record<string, unknown>, debug: boolean): Promise<string> {
+  if (debug) {
+    const safeArgs = sanitizeForLog(args);
+    console.log(`[DEBUG] Tool called: ${name} with args:`, JSON.stringify(safeArgs, null, 2));
   }
-  console.log(`[DEBUG] Tool called: ${name} with args:`, JSON.stringify(safeArgs, null, 2));
   const tool = tools.find((t) => t.name === name);
   if (!tool) return JSON.stringify({ error: `Unknown tool: ${name}` });
   try {
@@ -128,7 +175,6 @@ async function runOneTool(name: string, args: Record<string, unknown>): Promise<
     return JSON.stringify(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack : undefined;
     return JSON.stringify({ error: message });
   }
 }
@@ -141,7 +187,8 @@ async function executeAgentTools(
   openai: OpenAIClient,
   model: string,
   messages: ChatMessage[],
-  assistantMessage: AssistantMessage
+  assistantMessage: AssistantMessage,
+  debug: boolean
 ): Promise<string> {
   const current: ChatMessage[] = [...messages, assistantMessage];
 
@@ -156,7 +203,7 @@ async function executeAgentTools(
     } catch {
       args = {};
     }
-    const result = await runOneTool(tc.function.name, args);
+    const result = await runOneTool(tc.function.name, args, debug);
     current.push({
       role: "tool",
       tool_call_id: tc.id,
@@ -177,7 +224,7 @@ async function executeAgentTools(
   }
 
   const msg = choice.message as AssistantMessage;
-  return executeAgentTools(openai, model, current, msg);
+  return executeAgentTools(openai, model, current, msg, debug);
 }
 
 /** Register the `agent` command on the Commander program. */
@@ -186,12 +233,14 @@ export function registerAgentCommand(program: Command): void {
     .command("agent")
     .description("Chat with Stellar DeFi agent (balance, swap quotes)")
     .option("--api-key <key>", "Groq API key (or set GROQ_API_KEY)")
-    .action(async (options: { apiKey?: string }) => {
+    .option("--debug", "Enable debug logging (secrets redacted)")
+    .action(async (options: { apiKey?: string; debug?: boolean }) => {
       const apiKey = options.apiKey ?? process.env.GROQ_API_KEY;
       if (!apiKey) {
         console.error("Error: Set GROQ_API_KEY or pass --api-key <key>");
         process.exit(1);
       }
+      const debug = Boolean(options.debug) || process.env.STELLAR_AGENT_KIT_DEBUG === "1";
 
       const { default: OpenAI } = await import("openai");
       const openai = new OpenAI({
@@ -227,7 +276,7 @@ export function registerAgentCommand(program: Command): void {
 
           const assistantMessage = choice.message;
 
-          const final = await executeAgentTools(openai as OpenAIClient, model, history, assistantMessage);
+          const final = await executeAgentTools(openai as OpenAIClient, model, history, assistantMessage, debug);
           console.log("Agent:", final);
 
           history.push({ role: "assistant", content: final });
