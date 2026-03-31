@@ -10,7 +10,7 @@ import { createReflectorOracle, type OracleAsset, type PriceData } from "./oracl
 import { lendingSupply as blendSupply, lendingBorrow as blendBorrow, type LendingSupplyArgs, type LendingBorrowArgs, type LendingResult } from "./lending/index.js";
 
 /** This project is mainnet-only. */
-export type StellarNetwork = "mainnet";
+export type StellarNetwork = "mainnet" | "testnet";
 
 export class StellarAgentKit {
   public readonly keypair: Keypair;
@@ -22,12 +22,9 @@ export class StellarAgentKit {
   private _oracle: ReturnType<typeof createReflectorOracle> | null = null;
 
   constructor(secretKey: string, network: StellarNetwork = "mainnet") {
-    if (network !== "mainnet") {
-      throw new Error("This project is mainnet-only. Use network: 'mainnet'.");
-    }
     this.keypair = Keypair.fromSecret(secretKey.trim());
-    this.network = "mainnet";
-    this.config = getNetworkConfig();
+    this.network = network;
+    this.config = getNetworkConfig(network);
   }
 
   /**
@@ -111,7 +108,8 @@ export class StellarAgentKit {
   async createAccount(destination: string, startingBalance: string): Promise<{ hash: string }> {
     this.ensureInitialized();
     if (!this._horizon) throw new Error("Horizon not initialized");
-    const networkPassphrase = Networks.PUBLIC;
+    const networkPassphrase =
+      this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
     const sourceAccount = await this._horizon.loadAccount(this.keypair.publicKey());
     const tx = new TransactionBuilder(sourceAccount, {
       fee: "100",
@@ -143,7 +141,8 @@ export class StellarAgentKit {
     this.ensureInitialized();
     if (!this._horizon) throw new Error("Horizon not initialized");
 
-    const networkPassphrase = Networks.PUBLIC;
+    const networkPassphrase =
+      this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
     const sourceAccount = await this._horizon.loadAccount(this.keypair.publicKey());
 
     const asset =
@@ -194,7 +193,8 @@ export class StellarAgentKit {
     const pathAssets = path.map((p) =>
       p.assetCode === "XLM" && !p.issuer ? Asset.native() : new Asset(p.assetCode, p.issuer!)
     );
-    const networkPassphrase = Networks.PUBLIC;
+    const networkPassphrase =
+      this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
     const sourceAccount = await this._horizon.loadAccount(this.keypair.publicKey());
     const tx = new TransactionBuilder(sourceAccount, {
       fee: "100",

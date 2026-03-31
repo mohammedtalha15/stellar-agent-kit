@@ -25,8 +25,7 @@ export const networks = { mainnet, testnet } as const;
 export type NetworkName = keyof typeof networks;
 
 /** Returns network config for mainnet or testnet. */
-export function getNetworkConfig(name?: string): NetworkConfig {
-  const key = (name ?? "mainnet").toLowerCase();
-  if (key === "testnet") return testnet;
+export function getNetworkConfig(name: NetworkName = "mainnet"): NetworkConfig {
+  if (name === "testnet") return testnet;
   return mainnet;
 }

@@ -34,7 +34,7 @@ export function createSoroSwapDexClient(
   const key = apiKey ?? process.env.SOROSWAP_API_KEY;
 
   async function getQuote(from: DexAsset, to: DexAsset, amount: string): Promise<QuoteResult> {
-    const url = `${SOROSWAP_API_BASE}/quote?network=mainnet`;
+    const url = `${SOROSWAP_API_BASE}/quote?network=${networkConfig.horizonUrl.includes("testnet") ? "testnet" : "mainnet"}`;
     const body = {
       assetIn: assetToApiString(from),
       assetOut: assetToApiString(to),
@@ -56,7 +56,7 @@ export function createSoroSwapDexClient(
     if (!key) throw new Error("executeSwap requires SOROSWAP_API_KEY");
     const keypair = Keypair.fromSecret(secretKey.trim());
     const fromAddress = keypair.publicKey();
-    const buildUrl = `${SOROSWAP_API_BASE}/quote/build?network=mainnet`;
+    const buildUrl = `${SOROSWAP_API_BASE}/quote/build?network=${networkConfig.horizonUrl.includes("testnet") ? "testnet" : "mainnet"}`;
     const buildRes = await fetch(buildUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -66,8 +66,8 @@ export function createSoroSwapDexClient(
     const buildData = (await buildRes.json()) as { xdr?: string };
     const xdrBase64 = buildData?.xdr;
     if (!xdrBase64 || typeof xdrBase64 !== "string") throw new Error("SoroSwap build response missing xdr");
-    const config = getNetworkConfig("mainnet");
-    const networkPassphrase = Networks.PUBLIC;
+    const config = getNetworkConfig(networkConfig.horizonUrl.includes("testnet") ? "testnet" : "mainnet");
+    const networkPassphrase = networkConfig.horizonUrl.includes("testnet") ? Networks.TESTNET : Networks.PUBLIC;
     const tx = TransactionBuilder.fromXDR(xdrBase64, networkPassphrase);
     tx.sign(keypair);
     const server = new rpc.Server(config.sorobanRpcUrl, { allowHttp: config.sorobanRpcUrl.startsWith("http:") });

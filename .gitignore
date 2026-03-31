@@ -5,3 +5,6 @@ node_modules
 .gitignore
 .env.local
 ui/.env.local
+
+dist
+.env

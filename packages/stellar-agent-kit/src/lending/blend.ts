@@ -57,7 +57,10 @@ async function buildSubmitTx(
     requests,
   });
   const op = xdr.Operation.fromXDR(submitOpXdr, "base64");
-  const networkPassphrase = Networks.PUBLIC;
+  const networkPassphrase =
+    networkConfig.horizonUrl === "https://horizon-testnet.stellar.org"
+      ? Networks.TESTNET
+      : Networks.PUBLIC;
   const horizon = new Horizon.Server(networkConfig.horizonUrl);
   const sourceAccount = await horizon.loadAccount(user);
   const tx = new TransactionBuilder(sourceAccount, {
